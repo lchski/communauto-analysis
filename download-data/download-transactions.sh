@@ -55,4 +55,6 @@ for rental_id in $(jq -r '.transactions[] | select(.type == "StationBasedRental"
     # curl "https://www.reservauto.net/WCF/Core/CoreService.svc/Get?&apiUrl=%2Fapi%2FBilling%2FReservation%2F$rental_id" \
     #     --compressed \
     #     -H "Cookie: $WCF_COOKIE"
+
+    sleep 3
 done
