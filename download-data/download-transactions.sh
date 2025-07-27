@@ -66,16 +66,16 @@ for rental_id in $(jq -r '.transactions[] | select(.type == "StationBasedRental"
 
     if [ ! -f $RENTAL_FILE ]; then
         echo "rental file not found, downloading"
-        
+
         response=$(curl "https://restapifrontoffice.reservauto.net/api/v2/Rental/$rental_id/StationBased" \
             -s \
             --compressed \
             -w "%{http_code}" \
             -H "authorization: Bearer $BEARER_TOKEN")
-        
+
         http_code="${response: -3}"
         response_body="${response%???}"
-        
+
         if [ "$http_code" -eq 200 ]; then
             # Double-check that it's valid JSON
             if echo "$response_body" | jq empty 2>/dev/null; then
@@ -95,13 +95,65 @@ for rental_id in $(jq -r '.transactions[] | select(.type == "StationBasedRental"
             echo "Error: HTTP $http_code response for rental ID $rental_id"
             continue
         fi
-        
+
         sleep 3
     else
         echo "rental file found, moving ahead"
     fi
-    
+
     # curl "https://www.reservauto.net/WCF/Core/CoreService.svc/Get?&apiUrl=%2Fapi%2FBilling%2FReservation%2F$rental_id" \
     #     --compressed \
     #     -H "Cookie: $WCF_COOKIE"
+done
+
+for rental_file in $OUT_DIR/rentals/*.json; do
+    # Extract the rental number from the file
+    rental_nb=$(jq -r '.rentalNb' "$rental_file")
+
+    if [ "$rental_nb" = "null" ] || [ -z "$rental_nb" ]; then
+        echo "Skipping $rental_file - no rentalNb found"
+        continue
+    fi
+
+    echo "\nProcessing rental number: $rental_nb"
+
+    # Create billing directory if it doesn't exist
+    mkdir -p "$OUT_DIR/billing"
+    billing_file="$OUT_DIR/billing/${rental_nb}.json"
+
+    if [ ! -f "$billing_file" ]; then
+        echo "Billing file not found, downloading"
+
+        # Use temporary file to avoid needing to echo
+        temp_response=$(mktemp)
+
+        http_code=$(curl "https://www.reservauto.net/WCF/Core/CoreService.svc/Get?&apiUrl=%2Fapi%2FBilling%2FReservation%2F$rental_nb" \
+            -s \
+            --compressed \
+            -w "%{http_code}" \
+            -o "$temp_response" \
+            -H "Cookie: $WCF_COOKIE")
+
+        if [ "$http_code" -eq 200 ]; then
+            # Extract the `d` property and parse its content as JSON
+            parsed_data=$(jq -r '.d' "$temp_response" | jq .)
+
+            if [ $? -eq 0 ] && [ "$parsed_data" != "null" ]; then
+                echo "$parsed_data" > "$billing_file"
+                echo "Successfully saved billing data to $billing_file"
+            else
+                echo "Error: Failed to parse response data for rental $rental_nb"
+                echo "Response was: $response_body"
+            fi
+        else
+            echo "Error: HTTP $http_code response for rental number $rental_nb"
+        fi
+
+        # Clean up temp file
+        rm "$temp_response"
+
+        sleep 3
+    else
+        echo "Billing file already exists: $billing_file"
+    fi
 done
