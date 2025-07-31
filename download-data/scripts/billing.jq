@@ -6,7 +6,7 @@
     .reservationStartDate,
     .vehiculeNo,
     .tripTotalDurationInMinutes,
-    (.durationInfo[] | select(.durationType == "BilledDuration") | .durationInMinutes),
+    ((.durationInfo[] | select(.durationType == "BilledDuration") | .durationInMinutes) // 0),
     .tripTotalDistanceInKm,
     .rateType,
     .packageName,
@@ -15,10 +15,10 @@
     .durationPrice,
     .distancePrice,
     .totalFees,
-    (.fees[] | select(.feeType == "CollisionDamagesWaiverFee") | .amount),
+    ((.fees[] | select(.feeType == "CollisionDamagesWaiverFee") | .amount) // 0),
     .totalCredits,
-    (.credits[] | length),
-    (.taxes[] | select(.name == "HST") | .taxAmount),
+    (.credits | length),
+    ((.taxes[] | select(.name == "HST") | .taxAmount) // 0),
     .purchaseReimbursement
 ]
 | @csv

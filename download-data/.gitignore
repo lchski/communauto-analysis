@@ -1,2 +1,4 @@
 data/
 .env
+analysis/*.db
+analysis/*.db.wal
