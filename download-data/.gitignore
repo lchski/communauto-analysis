@@ -2,3 +2,4 @@ data/
 .env
 analysis/*.db
 analysis/*.db.wal
+node_modules/

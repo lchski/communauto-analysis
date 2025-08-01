@@ -11,6 +11,7 @@
     .station.stationNb,
     .rentalCost,
     .rentalOwnerCustomerId,
-    .nbOfReceipts
+    .nbOfReceipts,
+    .customerNote
 ]
 | @csv
