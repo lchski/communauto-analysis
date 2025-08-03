@@ -304,7 +304,9 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 
 	let reconciledCosts = {}
 
+	// check Value plans against Open Plus
 	for (const [planName, plan] of Object.entries(baseCosts)) {
+		// Open and Open Plus don't get rate changes, so just keep as-is
 		if (planName === "Open" || planName === "Open Plus") {
 			reconciledCosts[planName] = plan
 			reconciledCosts[planName].reconciliation = "none"
@@ -321,6 +323,48 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 
 		reconciledCosts[planName] = baseCosts["Open Plus"]
 		reconciledCosts[planName].reconciliation = "switched to Open Plus"
+	}
+
+	// check Value plans for long distance
+	for (const [planName, plan] of Object.entries(reconciledCosts)) {
+		// Open and Open Plus don't get rate changes, so just keep as-is
+		if (planName === "Open" || planName === "Open Plus") {
+			continue
+		}
+
+		if (Object.hasOwn(baseCosts, "longDistanceLow") && plan.totalCost > baseCosts["longDistanceLow"].totalCost) {
+			reconciledCosts[planName] = baseCosts["longDistanceLow"]
+			reconciledCosts[planName].reconciliation = "switched to Long Distance (low season)"
+
+			continue
+		}
+
+		if (Object.hasOwn(baseCosts, "longDistanceHigh") && plan.totalCost > baseCosts["longDistanceHigh"].totalCost) {
+			reconciledCosts[planName] = baseCosts["longDistanceHigh"]
+			reconciledCosts[planName].reconciliation = "switched to Long Distance (high season)"
+
+			continue
+		}
+	}
+
+	// check Value Extra plan for workday
+	for (const [planName, plan] of Object.entries(reconciledCosts)) {
+		// check if a workday rate has been calculated
+		if (! Object.hasOwn(baseCosts, "workday")) {
+			continue
+		}
+
+		// only Value Extra gets the workday rate
+		if (planName !== "Value Extra") {
+			continue
+		}
+
+		if (plan.totalCost > baseCosts["workday"].totalCost) {
+			reconciledCosts[planName] = baseCosts["workday"]
+			reconciledCosts[planName].reconciliation = "switched to Workday"
+
+			continue
+		}
 	}
 
 	return reconciledCosts
@@ -349,7 +393,8 @@ const testEvals = tests.map(test => {
 				actual: {
 					duration: estimatesForScenario[estimate.plan].timeCost,
 					distance: estimatesForScenario[estimate.plan].kmCost,
-					total: estimatesForScenario[estimate.plan].totalCost
+					total: estimatesForScenario[estimate.plan].totalCost,
+					reconciliation: estimatesForScenario[estimate.plan].reconciliation
 				}
 			}))
 			.map(estimate => ({
