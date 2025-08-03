@@ -1,3 +1,13 @@
+// Communauto explanation of how trips are calculated:
+//   https://communauto.com/exemples-to-show-how-trip-costs-are-calculated/?lang=en
+//
+// Plan rate is calculated, along with the long distance and workday rates (if the trip is eligible for a workday rate).
+// Then, the lowest is taken. For Value plans, the OpenPlus plan is included as a possible lowest value.
+//
+// Algo:
+// - Calculate each plan standalone.
+// - Reconcile to the lowest eligible plan.
+
 function calculateRentalCost(startDate, endDate, totalKm) {
 	// Plan configurations
 	const plans = {
