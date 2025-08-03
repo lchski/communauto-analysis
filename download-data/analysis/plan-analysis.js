@@ -1,5 +1,9 @@
 import { readFileSync, writeFileSync } from 'fs'
 
+/**
+ * Costing functions
+ */
+
 // Communauto explanation of how trips are calculated:
 //   https://communauto.com/exemples-to-show-how-trip-costs-are-calculated/?lang=en
 //
@@ -293,47 +297,10 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 	return reconciledCosts
 }
 
-// Example usage:
-// console.log("=== Example 1: Weekday short trip (2.25 hours) ===");
-// const trip1 = calculateRentalCost('2024-03-05T10:00:00', '2024-03-05T12:05:00', 30);
-// console.log(trip1);
 
-// console.log("\n=== Example 2: Weekend long trip (33.75 hours) ===");
-// const trip2 = calculateRentalCost('2024-03-09T09:00:00', '2024-03-10T18:45:00', 120);
-// console.log(trip2);
-
-// console.log("\n=== Example 3: Multi-day trip spanning weekend ===");
-// const trip3 = calculateRentalCost('2024-03-08T14:30:00', '2024-03-11T10:15:00', 200);
-// console.log(trip3);
-
-// Helper function to display results in a formatted way
-function displayResults(startDate, endDate, totalKm) {
-	console.log(`\n=== Trip: ${startDate} to ${endDate}, ${totalKm}km ===`);
-	const results = calculateRentalCost(startDate, endDate, totalKm);
-
-	console.log(`Duration: ${results.value.totalHours} hours across ${results.value.totalDays} day(s)`);
-	console.log(`Time breakdown: ${results.value.weekdayHours}h weekday, ${results.value.weekendHours}h weekend`);
-	console.log(`Day breakdown: ${results.value.weekdayDays} weekday(s), ${results.value.weekendDays} weekend day(s)`);
-	console.log('');
-
-	for (const [plan, data] of Object.entries(results)) {
-		console.log(`${plan.toUpperCase()}:`);
-		if (data.usedDailyRate) {
-			console.log(`  Time cost: ${data.timeCost} (daily rate: ${data.dailyBreakdown.weekdayCost} weekday + ${data.dailyBreakdown.weekendCost} weekend)`);
-		} else {
-			console.log(`  Time cost: ${data.timeCost} (hourly rate: ${data.hourlyBreakdown.weekdayCost} weekday + ${data.hourlyBreakdown.weekendCost} weekend)`);
-		}
-		console.log(`  KM cost: ${data.kmCost}`);
-		console.log(`  TOTAL: ${data.totalCost}`);
-		console.log('');
-	}
-}
-
-// Test with the helper function - showing weekend/weekday breakdown
-// displayResults('2024-03-08T22:00:00', '2024-03-11T10:30:00', 75); // Friday night to Monday morning
-// displayResults('2025-08-07T10:00:00', '2025-08-07T12:15:00', 30);
-
-
+/**
+ * Test runner
+ */
 const tests = JSON.parse(readFileSync('data/indices/rate-tests.json'))
 
 const testEvals = tests.map(test => {
