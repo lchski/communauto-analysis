@@ -100,7 +100,12 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 			kmRate1: 0, // first 40km free
 			kmRate2: 0.35,
 			kmThreshold: 40,
-			tripIsEligible: (startDate, endDate) => Math.abs(startDate - endDate) / (60 * 60 * 1000)
+			tripIsEligible: (startDate, endDate) => {
+				const start = new Date(startDate)
+				const end = new Date(endDate)
+
+				return Math.abs(start - end) / (60 * 60 * 1000) <= 10
+			}
 		}
 	};
 
