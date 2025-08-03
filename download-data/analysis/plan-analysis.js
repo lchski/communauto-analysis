@@ -212,6 +212,11 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 		let weekdayDailyCost = 0;
 		let weekendDailyCost = 0;
 
+		// bail if this plan doesn't qualify to be calculated
+		if (plan.tripIsEligible !== true && plan.tripIsEligible(start, end) !== true) {
+			continue;
+		}
+
 		// Calculate cost for each day individually
 		for (const day of timeBreakdown.days) {
 			const baseHourlyRate = plan.hourlyRate;
