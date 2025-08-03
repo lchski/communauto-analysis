@@ -45,7 +45,7 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 		"Value Plus": {
 			hourlyRate: 3.9,
 			maxDailyRate: 29,
-			kmRate1: 0.39,
+			kmRate1: 0.38,
 			kmRate2: 0.30,
 			kmThreshold: 50,
 			tripIsEligible: true
@@ -285,11 +285,14 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 	for (const [planName, plan] of Object.entries(baseCosts)) {
 		if (planName === "Open" || planName === "Open Plus") {
 			reconciledCosts[planName] = plan
+			reconciledCosts[planName].reconciliation = "none"
 		} else {
 			if (plan.totalCost < baseCosts["Open Plus"].totalCost) {
 				reconciledCosts[planName] = plan
+				reconciledCosts[planName].reconciliation = "none"
 			} else {
 				reconciledCosts[planName] = baseCosts["Open Plus"]
+				reconciledCosts[planName].reconciliation = "switched to Open Plus"
 			}
 		}
 	}
