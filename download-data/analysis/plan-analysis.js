@@ -104,6 +104,11 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 				const start = new Date(startDate)
 				const end = new Date(endDate)
 
+				// bail if Sunday or Saturday
+				if ([0, 6].includes(start.getDay())) {
+					return false
+				}
+
 				return Math.abs(start - end) / (60 * 60 * 1000) <= 10
 			}
 		}
