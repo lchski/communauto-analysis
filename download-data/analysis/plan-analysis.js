@@ -308,15 +308,19 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 		if (planName === "Open" || planName === "Open Plus") {
 			reconciledCosts[planName] = plan
 			reconciledCosts[planName].reconciliation = "none"
-		} else {
-			if (plan.totalCost < baseCosts["Open Plus"].totalCost) {
-				reconciledCosts[planName] = plan
-				reconciledCosts[planName].reconciliation = "none"
-			} else {
-				reconciledCosts[planName] = baseCosts["Open Plus"]
-				reconciledCosts[planName].reconciliation = "switched to Open Plus"
-			}
+
+			continue
 		}
+
+		if (plan.totalCost < baseCosts["Open Plus"].totalCost) {
+			reconciledCosts[planName] = plan
+			reconciledCosts[planName].reconciliation = "none"
+
+			continue
+		}
+
+		reconciledCosts[planName] = baseCosts["Open Plus"]
+		reconciledCosts[planName].reconciliation = "switched to Open Plus"
 	}
 
 	return reconciledCosts
