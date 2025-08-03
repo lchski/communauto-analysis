@@ -1,3 +1,6 @@
+import { readFileSync, writeFileSync } from 'fs'
+import { totalmem } from 'os';
+
 // Communauto explanation of how trips are calculated:
 //   https://communauto.com/exemples-to-show-how-trip-costs-are-calculated/?lang=en
 //
@@ -8,10 +11,10 @@
 // - Calculate each plan standalone.
 // - Reconcile to the lowest eligible plan.
 
-function calculateRentalCost(startDate, endDate, totalKm) {
+function calculateBaseRentalCost(startDate, endDate, totalKm) {
 	// Plan configurations
 	const plans = {
-		open: {
+		"Open": {
 			hourlyRate: 13,
 			maxDailyRate: 55,
 			kmRate1: 0, // first 75km free
@@ -19,7 +22,7 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 			kmThreshold: 75,
 			tripIsEligible: true
 		},
-		openPlus: {
+		"Open Plus": {
 			hourlyRate: 7.5,
 			maxDailyRate: 50,
 			maxDailyRate2: 35,
@@ -28,7 +31,7 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 			kmThreshold: Infinity, // no threshold change
 			tripIsEligible: true
 		},
-		value: {
+		"Value": {
 			hourlyRate: 4.5,
 			maxDailyRate: 35,
 			kmRate1: 0.47,
@@ -36,7 +39,7 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 			kmThreshold: 50,
 			tripIsEligible: true
 		},
-		valuePlus: {
+		"Value Plus": {
 			hourlyRate: 3.9,
 			maxDailyRate: 29,
 			kmRate1: 0.39,
@@ -44,7 +47,7 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 			kmThreshold: 50,
 			tripIsEligible: true
 		},
-		valueExtra: {
+		"Value Extra": {
 			hourlyRate: 3.6,
 			maxDailyRate: 25,
 			kmRate1: 0.30,
@@ -271,18 +274,38 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 	return results;
 }
 
+function calculateRentalCost(startDate, endDate, totalKm) {
+	const baseCosts = calculateBaseRentalCost(startDate, endDate, totalKm)
+
+	let reconciledCosts = {}
+
+	for (const [planName, plan] of Object.entries(baseCosts)) {
+		if (planName === "Open" || planName === "Open Plus") {
+			reconciledCosts[planName] = plan
+		} else {
+			if (plan.totalCost < baseCosts["Open Plus"].totalCost) {
+				reconciledCosts[planName] = plan
+			} else {
+				reconciledCosts[planName] = baseCosts["Open Plus"]
+			}
+		}
+	}
+
+	return reconciledCosts
+}
+
 // Example usage:
-console.log("=== Example 1: Weekday short trip (2.25 hours) ===");
-const trip1 = calculateRentalCost('2024-03-05T10:00:00', '2024-03-05T12:05:00', 30);
-console.log(trip1);
+// console.log("=== Example 1: Weekday short trip (2.25 hours) ===");
+// const trip1 = calculateRentalCost('2024-03-05T10:00:00', '2024-03-05T12:05:00', 30);
+// console.log(trip1);
 
-console.log("\n=== Example 2: Weekend long trip (33.75 hours) ===");
-const trip2 = calculateRentalCost('2024-03-09T09:00:00', '2024-03-10T18:45:00', 120);
-console.log(trip2);
+// console.log("\n=== Example 2: Weekend long trip (33.75 hours) ===");
+// const trip2 = calculateRentalCost('2024-03-09T09:00:00', '2024-03-10T18:45:00', 120);
+// console.log(trip2);
 
-console.log("\n=== Example 3: Multi-day trip spanning weekend ===");
-const trip3 = calculateRentalCost('2024-03-08T14:30:00', '2024-03-11T10:15:00', 200);
-console.log(trip3);
+// console.log("\n=== Example 3: Multi-day trip spanning weekend ===");
+// const trip3 = calculateRentalCost('2024-03-08T14:30:00', '2024-03-11T10:15:00', 200);
+// console.log(trip3);
 
 // Helper function to display results in a formatted way
 function displayResults(startDate, endDate, totalKm) {
@@ -309,7 +332,7 @@ function displayResults(startDate, endDate, totalKm) {
 
 // Test with the helper function - showing weekend/weekday breakdown
 // displayResults('2024-03-08T22:00:00', '2024-03-11T10:30:00', 75); // Friday night to Monday morning
-displayResults('2025-08-07T10:00:00', '2025-08-07T12:15:00', 30);
+// displayResults('2025-08-07T10:00:00', '2025-08-07T12:15:00', 30);
 
 async function queryCommunautoPrice(startDate, endDate, totalKm) {
 	const qry = await fetch(`https://restapifrontoffice.reservauto.net/api/v2/Billing/TripCostEstimate?CityId=103&StartDate=${encodeURIComponent(startDate)}-04%3A00&EndDate=${encodeURIComponent(endDate)}-04%3A00&Distance=${totalKm}&AcceptLanguage=en`, {
@@ -318,26 +341,105 @@ async function queryCommunautoPrice(startDate, endDate, totalKm) {
 
 	const prices = await qry.json()
 
-	console.log(
-		prices.tripPackageCostEstimateList
-			.filter(estimate => estimate.serviceType === 'StationBased')
-			.map(estimate => ({
-				plan: estimate.localizedPlanTypeName,
-				rate: estimate.localizedBillingRateName,
-				duration: estimate.durationCost,
-				distance: estimate.distanceCost,
-				total: estimate.totalCost
-			}))
-	)
+	// console.log(
+	// 	prices.tripPackageCostEstimateList
+	// 		.filter(estimate => estimate.serviceType === 'StationBased')
+	// 		.map(estimate => ({
+	// 			plan: estimate.localizedPlanTypeName,
+	// 			rate: estimate.localizedBillingRateName,
+	// 			duration: estimate.durationCost,
+	// 			distance: estimate.distanceCost,
+	// 			total: estimate.totalCost
+	// 		}))
+	// )
 
-	return tripPackageCostEstimateList
+	return prices.tripPackageCostEstimateList
 		.filter(estimate => estimate.serviceType === 'StationBased')
 }
 
-testCases = [
-	['2025-08-07T10:00:00', '2025-08-07T12:15:00', 30],
-	['']
+const testCases = [
+	['1.00h weekday, 60km', '2025-08-07T10:00:00', '2025-08-07T11:00:00', 60],
+	['2.25h weekday, 30km', '2025-08-07T10:00:00', '2025-08-07T12:15:00', 30],
+	['5.00h weekday, 10km', '2025-08-07T10:00:00', '2025-08-07T15:00:00', 10],
+	['8.00h weekday, 70km', '2025-08-07T10:00:00', '2025-08-07T18:00:00', 70],
 ]
 
-await queryCommunautoPrice('2025-08-07T10:00:00', '2025-08-07T12:15:00', 30)
+async function buildTestCase(testCase) {
+	let caseDetails = {
+		scenario: testCase[0],
+		startDate: testCase[1],
+		endDate: testCase[2],
+		distance: testCase[3]
+	}
 
+	const communautoEstimates = await queryCommunautoPrice(caseDetails.startDate, caseDetails.endDate, caseDetails.distance)
+
+	caseDetails.communautoEstimates = communautoEstimates
+
+	const estimateTests = communautoEstimates
+		.map(estimate => ({
+			plan: estimate.localizedPlanTypeName,
+			rate: estimate.localizedBillingRateName,
+			duration: estimate.durationCost,
+			distance: estimate.distanceCost,
+			total: estimate.totalCost
+		}))
+
+	caseDetails.estimateTests = estimateTests
+
+	return caseDetails
+}
+
+// uncomment to query Communauto and get test values
+// Promise.all(testCases.map(buildTestCase)).then(testData => writeFileSync('data/indices/rate-tests.json', JSON.stringify(testData, null, 2)))
+
+const tests = JSON.parse(readFileSync('data/indices/rate-tests.json'))
+
+const testEvals = tests.map(test => {
+	const estimatesForScenario = calculateRentalCost(test.startDate, test.endDate, test.distance)
+
+	let testResults = {
+		scenario: test.scenario,
+		testEvals: test.estimateTests
+			.filter(estimate => estimate.plan !== "Open Super") // remove plan we don't compare against
+			.map(estimate => ({
+				plan: estimate.plan,
+				expected: {
+					duration: estimate.duration,
+					distance: estimate.distance,
+					total: estimate.total
+				},
+				actual: {
+					duration: estimatesForScenario[estimate.plan].timeCost,
+					distance: estimatesForScenario[estimate.plan].kmCost,
+					total: estimatesForScenario[estimate.plan].totalCost
+				}
+			}))
+			.map(estimate => ({
+				...estimate,
+				differenceEstimatedActual: Math.round((estimate.expected.total - estimate.actual.total) * 100) / 100
+			}))
+			.map(estimate => ({
+				...estimate,
+				testResult: Math.abs(estimate.differenceEstimatedActual) < 0.1 // NB! This sets our margin of error—10 cents is fine
+			}))
+	}
+
+	testResults.evalsResult = testResults.testEvals.every(testEval => testEval.testResult)
+
+	return testResults
+})
+
+writeFileSync('data/out/rate-tests-evals.json', JSON.stringify(testEvals, null, 2))
+
+let testEvalSummary = {
+	passed: testEvals.filter(testEval => testEval.evalsResult === true).map(testEval => testEval.scenario),
+	failed: testEvals.filter(testEval => testEval.evalsResult === false).map(testEval => testEval.scenario),
+	total: testEvals.length,
+}
+
+testEvalSummary.pass = testEvalSummary.passed.length
+testEvalSummary.fail = testEvalSummary.failed.length
+testEvalSummary.pass_rate = Math.round(testEvalSummary.pass / testEvalSummary.total * 100) / 100
+
+console.log(testEvalSummary)
