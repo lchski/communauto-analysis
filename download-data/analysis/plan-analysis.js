@@ -68,7 +68,13 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 			kmRate1: 0.24,
 			kmRate2: 0.15,
 			kmThreshold: 300,
-			tripIsEligible: true
+			tripIsEligible: (startDate, endDate) => {
+				const start = new Date(startDate)
+
+				return [0, 1, 2, 3, 4, 10, 11].includes(start.getMonth()) || // any date in January, February, March, April, May, November, December
+					(start.getMonth() === 5 && start.getDate() < 15) || // June 1 to 14
+					(start.getMonth() === 9 && start.getDate() > 15) // October 16+
+			}
 		},
 		longDistanceHigh: {
 			hourlyRate: 15,
@@ -80,7 +86,13 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 			kmRate1: 0.24,
 			kmRate2: 0.15,
 			kmThreshold: 300,
-			tripIsEligible: true
+			tripIsEligible: (startDate, endDate) => {
+				const start = new Date(startDate)
+
+				return [6, 7, 8].includes(start.getMonth()) || // any date in July, August, September
+					(start.getMonth() === 5 && start.getDate() >= 15) || // June 15+
+					(start.getMonth() === 9 && start.getDate() <= 15) // October 1 to 15
+			}
 		},
 		workday: {
 			hourlyRate: 23,
