@@ -6,7 +6,8 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 			maxDailyRate: 55,
 			kmRate1: 0, // first 75km free
 			kmRate2: 0.30,
-			kmThreshold: 75
+			kmThreshold: 75,
+			tripIsEligible: true
 		},
 		openPlus: {
 			hourlyRate: 7.5,
@@ -14,28 +15,64 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 			maxDailyRate2: 35,
 			kmRate1: 0.25,
 			kmRate2: 0.25, // same rate for all km
-			kmThreshold: Infinity // no threshold change
+			kmThreshold: Infinity, // no threshold change
+			tripIsEligible: true
 		},
 		value: {
 			hourlyRate: 4.5,
 			maxDailyRate: 35,
 			kmRate1: 0.47,
 			kmRate2: 0.34,
-			kmThreshold: 50
+			kmThreshold: 50,
+			tripIsEligible: true
 		},
 		valuePlus: {
 			hourlyRate: 3.9,
 			maxDailyRate: 29,
 			kmRate1: 0.39,
 			kmRate2: 0.30,
-			kmThreshold: 50
+			kmThreshold: 50,
+			tripIsEligible: true
 		},
 		valueExtra: {
 			hourlyRate: 3.6,
 			maxDailyRate: 25,
 			kmRate1: 0.30,
 			kmRate2: 0.30, // Same rate for all km
-			kmThreshold: Infinity // No threshold change
+			kmThreshold: Infinity, // No threshold change
+			tripIsEligible: true
+		},
+		longDistanceLow: {
+			hourlyRate: 15,
+			maxDailyRate: {
+				firstDay: 41,
+				additionalDay: 32,
+				week: 195
+			},
+			kmRate1: 0.24,
+			kmRate2: 0.15,
+			kmThreshold: 300,
+			tripIsEligible: true
+		},
+		longDistanceHigh: {
+			hourlyRate: 15,
+			maxDailyRate: {
+				firstDay: 55,
+				additionalDay: 45,
+				week: 240
+			},
+			kmRate1: 0.24,
+			kmRate2: 0.15,
+			kmThreshold: 300,
+			tripIsEligible: true
+		},
+		workday: {
+			hourlyRate: 23,
+			maxDailyRate: 23, // 23 flat rate for day
+			kmRate1: 0, // first 40km free
+			kmRate2: 0.35,
+			kmThreshold: 40,
+			tripIsEligible: (startDate, endDate) => Math.abs(startDate - endDate) / (60 * 60 * 1000)
 		}
 	};
 
@@ -262,4 +299,35 @@ function displayResults(startDate, endDate, totalKm) {
 
 // Test with the helper function - showing weekend/weekday breakdown
 // displayResults('2024-03-08T22:00:00', '2024-03-11T10:30:00', 75); // Friday night to Monday morning
-displayResults('2024-03-05T10:00:00', '2024-03-05T12:05:00', 30);
+displayResults('2025-08-07T10:00:00', '2025-08-07T12:15:00', 30);
+
+async function queryCommunautoPrice(startDate, endDate, totalKm) {
+	const qry = await fetch(`https://restapifrontoffice.reservauto.net/api/v2/Billing/TripCostEstimate?CityId=103&StartDate=${encodeURIComponent(startDate)}-04%3A00&EndDate=${encodeURIComponent(endDate)}-04%3A00&Distance=${totalKm}&AcceptLanguage=en`, {
+		"method": "GET",
+	});
+
+	const prices = await qry.json()
+
+	console.log(
+		prices.tripPackageCostEstimateList
+			.filter(estimate => estimate.serviceType === 'StationBased')
+			.map(estimate => ({
+				plan: estimate.localizedPlanTypeName,
+				rate: estimate.localizedBillingRateName,
+				duration: estimate.durationCost,
+				distance: estimate.distanceCost,
+				total: estimate.totalCost
+			}))
+	)
+
+	return tripPackageCostEstimateList
+		.filter(estimate => estimate.serviceType === 'StationBased')
+}
+
+testCases = [
+	['2025-08-07T10:00:00', '2025-08-07T12:15:00', 30],
+	['']
+]
+
+await queryCommunautoPrice('2025-08-07T10:00:00', '2025-08-07T12:15:00', 30)
+
