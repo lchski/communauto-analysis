@@ -353,11 +353,7 @@ function calculateRentalCost(startDate, endDate, totalKm) {
  */
 const tests = JSON.parse(readFileSync('data/indices/rate-tests.json'))
 
-const testsOverride = ['3 days, 750km (high szn)',
-    '4 days, 750km (high szn)',
-    '6 days, 750km (high szn)',
-    '3 days, 750km (low szn)',
-    '4 days, 750km (low szn)']
+const testsOverride = JSON.parse(readFileSync('data/indices/rate-tests-override.json', {encoding: "utf-8"}).replaceAll(`'`, `"`))
 
 const testsToRun = (testsOverride.length === 0) ? tests :
 	tests.filter(test => testsOverride.includes(test.scenario))
