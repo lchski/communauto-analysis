@@ -171,10 +171,6 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 
 		return {
 			days,
-			weekendHours: Math.round(totalWeekendHours * 4) / 4,
-			weekdayHours: Math.round(totalWeekdayHours * 4) / 4,
-			weekendDays: totalWeekendDays,
-			weekdayDays: totalWeekdayDays,
 			hasWeekend: totalWeekendHours > 0
 		};
 	}
@@ -195,6 +191,67 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 		}
 	}
 
+	// Helper function to get the daily rate, accounting for long distance plans
+	function getDailyRate(plan, dayIndex, isWeekend) {
+		let baseDailyRate = plan.maxDailyRate;
+
+		// Handle complex maxDailyRate structure (long distance plans)
+		if (typeof plan.maxDailyRate === 'object') {
+			if (dayIndex === 0) {
+				// First day
+				baseDailyRate = plan.maxDailyRate.firstDay;
+			} else {
+				// Additional days - use additionalDay rate
+				baseDailyRate = plan.maxDailyRate.additionalDay;
+			}
+		}
+		// Handle non-long distance plans with maxDailyRate2
+		else if (Object.hasOwn(plan, 'maxDailyRate2') && dayIndex > 0) {
+			baseDailyRate = plan.maxDailyRate2;
+		}
+
+		// Apply weekend surcharge
+		return isWeekend ? baseDailyRate + weekendDailySurcharge : baseDailyRate;
+	}
+
+	// Helper function to calculate time cost for long distance plans with weekly caps
+	function calculateLongDistanceTimeCost(plan, days) {
+		const weeklyRate = plan.maxDailyRate.week;
+		let totalCost = 0;
+		let weeklyAccumulator = 0;
+
+		for (let dayIndex = 0; dayIndex < days.length; dayIndex++) {
+			const day = days[dayIndex];
+
+			// Check if we've completed a week (7 days)
+			if (dayIndex > 0 && dayIndex % 7 === 0) {
+				// Apply weekly cap to the previous week
+				const weekCost = Math.min(weeklyAccumulator, weeklyRate);
+				totalCost += weekCost;
+
+				// Reset for new week
+				weeklyAccumulator = 0;
+			}
+
+			// Calculate cost for this day
+			const hourlyRate = day.isWeekend ? plan.hourlyRate + weekendHourlySurcharge : plan.hourlyRate;
+			const dailyRate = getDailyRate(plan, dayIndex, day.isWeekend);
+
+			const dayHourlyCost = day.hours * hourlyRate;
+			const dayTimeCost = Math.min(dayHourlyCost, dailyRate);
+
+			weeklyAccumulator += dayTimeCost;
+		}
+
+		// Handle the final partial or complete week
+		if (weeklyAccumulator > 0) {
+			const finalWeekCost = Math.min(weeklyAccumulator, weeklyRate);
+			totalCost += finalWeekCost;
+		}
+
+		return totalCost;
+	}
+
 	// Calculate cost for each plan
 	const results = {};
 
@@ -212,38 +269,38 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 			continue;
 		}
 
-		// Calculate cost for each day individually
-		for (const day of timeBreakdown.days) {
-			const baseHourlyRate = plan.hourlyRate;
-			let baseDailyRate = plan.maxDailyRate;
+		// Check if this is a long distance plan with weekly caps
+		const isLongDistancePlan = typeof plan.maxDailyRate === 'object' && plan.maxDailyRate.week;
 
-			// Switch to secondary daily rate if one exists, and we're beyond the first day
-			if (Object.hasOwn(plan, 'maxDailyRate2') && timeBreakdown.days.indexOf(day) > 0) {
-				baseDailyRate = plan.maxDailyRate2;
-			}
+		if (isLongDistancePlan) {
+			// Use special calculation for long distance plans
+			totalTimeCost = calculateLongDistanceTimeCost(plan, timeBreakdown.days);
+		} else {
+			// Normal calculation for simple plans
+			for (const day of timeBreakdown.days) {
+				const dayIndex = timeBreakdown.days.indexOf(day);
+				const hourlyRate = day.isWeekend ? plan.hourlyRate + weekendHourlySurcharge : plan.hourlyRate;
+				const dailyRate = getDailyRate(plan, dayIndex, day.isWeekend);
 
-			// Apply weekend surcharge if it's a weekend day
-			const hourlyRate = day.isWeekend ? baseHourlyRate + weekendHourlySurcharge : baseHourlyRate;
-			const dailyRate = day.isWeekend ? baseDailyRate + weekendDailySurcharge : baseDailyRate;
+				// Calculate cost for this day using both methods
+				const dayHourlyCost = day.hours * hourlyRate;
+				const dayDailyCost = dailyRate; // Full daily rate regardless of hours
 
-			// Calculate cost for this day using both methods
-			const dayHourlyCost = day.hours * hourlyRate;
-			const dayDailyCost = dailyRate; // Full daily rate regardless of hours
+				// Use the cheaper option for this day
+				const dayTimeCost = Math.min(dayHourlyCost, dayDailyCost);
+				totalTimeCost += dayTimeCost;
 
-			// Use the cheaper option for this day
-			const dayTimeCost = Math.min(dayHourlyCost, dayDailyCost);
-			totalTimeCost += dayTimeCost;
+				// Track totals for breakdown display
+				totalHourlyCost += dayHourlyCost;
+				totalDailyCost += dayDailyCost;
 
-			// Track totals for breakdown display
-			totalHourlyCost += dayHourlyCost;
-			totalDailyCost += dayDailyCost;
-
-			if (day.isWeekend) {
-				weekendHourlyCost += dayHourlyCost;
-				weekendDailyCost += dayDailyCost;
-			} else {
-				weekdayHourlyCost += dayHourlyCost;
-				weekdayDailyCost += dayDailyCost;
+				if (day.isWeekend) {
+					weekendHourlyCost += dayHourlyCost;
+					weekendDailyCost += dayDailyCost;
+				} else {
+					weekdayHourlyCost += dayHourlyCost;
+					weekdayDailyCost += dayDailyCost;
+				}
 			}
 		}
 
@@ -257,19 +314,23 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 			timeCost: Math.round(totalTimeCost * 100) / 100,
 			kmCost: Math.round(kmCost * 100) / 100,
 			totalCost: Math.round(totalCost * 100) / 100,
-			dayByDayBreakdown: timeBreakdown.days.map(day => ({
-				date: day.date.toISOString().split('T')[0],
-				hours: day.hours,
-				isWeekend: day.isWeekend,
-				hourlyRate: day.isWeekend ? plan.hourlyRate + weekendHourlySurcharge : plan.hourlyRate,
-				dailyRate: day.isWeekend ? plan.maxDailyRate + weekendDailySurcharge : plan.maxDailyRate,
-				hourlyCost: Math.round(day.hours * (day.isWeekend ? plan.hourlyRate + weekendHourlySurcharge : plan.hourlyRate) * 100) / 100,
-				dailyCost: day.isWeekend ? plan.maxDailyRate + weekendDailySurcharge : plan.maxDailyRate,
-				actualCost: Math.round(Math.min(
-					day.hours * (day.isWeekend ? plan.hourlyRate + weekendHourlySurcharge : plan.hourlyRate),
-					day.isWeekend ? plan.maxDailyRate + weekendDailySurcharge : plan.maxDailyRate
-				) * 100) / 100
-			}))
+			dayByDayBreakdown: timeBreakdown.days.map((day, dayIndex) => {
+				const hourlyRate = day.isWeekend ? plan.hourlyRate + weekendHourlySurcharge : plan.hourlyRate;
+				const dailyRate = getDailyRate(plan, dayIndex, day.isWeekend);
+				const hourlyCost = day.hours * hourlyRate;
+				const actualCost = Math.min(hourlyCost, dailyRate);
+
+				return {
+					date: day.date.toISOString().split('T')[0],
+					hours: day.hours,
+					isWeekend: day.isWeekend,
+					hourlyRate: hourlyRate,
+					dailyRate: dailyRate,
+					hourlyCost: Math.round(hourlyCost * 100) / 100,
+					dailyCost: dailyRate,
+					actualCost: Math.round(actualCost * 100) / 100
+				};
+			})
 		};
 	}
 
@@ -327,7 +388,7 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 	// check Value Extra plan for workday
 	for (const [planName, plan] of Object.entries(reconciledCosts)) {
 		// check if a workday rate has been calculated
-		if (! Object.hasOwn(baseCosts, "workday")) {
+		if (!Object.hasOwn(baseCosts, "workday")) {
 			continue
 		}
 
@@ -381,11 +442,11 @@ const testEvals = testsToRun.map(test => {
 			}))
 			.map(estimate => ({
 				...estimate,
-				differenceEstimatedActual: Math.round((estimate.expected.total - estimate.actual.total) * 100) / 100
+				differenceExpectedActual: Math.round((estimate.actual.total - estimate.expected.total) * 100) / 100
 			}))
 			.map(estimate => ({
 				...estimate,
-				testResult: Math.abs(estimate.differenceEstimatedActual) < 0.1 // NB! This sets our margin of error—10 cents is fine
+				testResult: Math.abs(estimate.differenceExpectedActual) < 0.1 // NB! This sets our margin of error—10 cents is fine
 			}))
 	}
 
