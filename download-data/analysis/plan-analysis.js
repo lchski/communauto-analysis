@@ -1,4 +1,7 @@
-import { readFileSync, writeFileSync } from 'fs'
+import fs from 'node:fs'
+import path from 'node:path'
+import { parse } from 'csv-parse/sync'
+import { stringify } from 'csv-stringify/sync'
 
 /**
  * Costing functions
@@ -412,9 +415,9 @@ function calculateRentalCost(startDate, endDate, totalKm) {
 /**
  * Test runner
  */
-const tests = JSON.parse(readFileSync('data/indices/rate-tests.json'))
+const tests = JSON.parse(fs.readFileSync('data/indices/rate-tests.json'))
 
-const testsOverride = JSON.parse(readFileSync('data/indices/rate-tests-override.json', {encoding: "utf-8"}).replaceAll(`'`, `"`))
+const testsOverride = JSON.parse(fs.readFileSync('data/indices/rate-tests-override.json', {encoding: "utf-8"}).replaceAll(`'`, `"`))
 
 const testsToRun = (testsOverride.length === 0) ? tests :
 	tests.filter(test => testsOverride.includes(test.scenario))
@@ -455,7 +458,7 @@ const testEvals = testsToRun.map(test => {
 	return testResults
 })
 
-writeFileSync('data/out/rate-tests-evals.json', JSON.stringify(testEvals, null, 2))
+fs.writeFileSync('data/out/rate-tests-evals.json', JSON.stringify(testEvals, null, 2))
 
 let testEvalSummary = {
 	passed: testEvals.filter(testEval => testEval.evalsResult === true).map(testEval => testEval.scenario),
@@ -467,4 +470,48 @@ testEvalSummary.pass = testEvalSummary.passed.length
 testEvalSummary.fail = testEvalSummary.failed.length
 testEvalSummary.pass_rate = Math.round(testEvalSummary.pass / testEvalSummary.total * 100) / 100
 
-console.log(testEvalSummary)
+// console.log(testEvalSummary)
+
+
+
+/**
+ * Compute on historical data
+ */
+const inputPath = path.join('data', 'out', 'trips-to-calc.csv');
+const outputPath = path.join('data', 'out', 'trips-calculated.csv');
+
+// Read and parse CSV
+const input = fs.readFileSync(inputPath, 'utf8');
+const records = parse(input, { columns: true });
+
+// Calculate and add column
+const updated = records.map(row => {
+	let newRow = row;
+
+	const estimatesForRow = calculateRentalCost(row.date_start, row.date_end_billed, row.distance_km)
+
+	for (const [planName, plan] of Object.entries(estimatesForRow)) {
+		// skip extra plans used just for calculation
+		if (! ["Open", "Open Plus", "Value", "Value Plus", "Value Extra"].includes(planName)) {
+			continue
+		}
+
+		newRow[planName] = plan.totalCost
+	}
+
+	return newRow
+});
+
+// Stringify and write to file
+const output = stringify(updated, {
+  header: true,
+  columns: Object.keys(updated[0])
+});
+
+// Ensure directory exists
+fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+
+// Write to output file
+fs.writeFileSync(outputPath, output);
+console.log(`✅ Wrote ${updated.length} rows to ${outputPath}`);
+

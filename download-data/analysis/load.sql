@@ -33,6 +33,20 @@ WHERE t.rental_id = lwt.rental_id AND t.reservation_id = lwt.reservation_id AND 
 -- data to run through the DPF algorithm
 COPY (SELECT rental_id, reservation_id, date_start, trip_note, likely_work_trip, duration_min, fees_dpf FROM trips) TO 'data/out/dpf-fees-to-calc.csv';
 
+-- data to run through the pricing algorithm
+COPY (
+	SELECT
+		rental_id,
+		reservation_id,
+		date_start,
+		date_end,
+		date_end_billed: date_start + INTERVAL (duration_min_billed) MINUTES,
+		duration_min,
+		duration_min_billed,
+		distance_km,
+		cost_total_from_plan: cost_duration + cost_distance
+	FROM trips
+) TO 'data/out/trips-to-calc.csv';
 
 
 -- ANALYSIS
