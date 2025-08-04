@@ -14,106 +14,106 @@ import { readFileSync, writeFileSync } from 'fs'
 // - Calculate each plan standalone.
 // - Reconcile to the lowest eligible plan.
 
-function calculateBaseRentalCost(startDate, endDate, totalKm) {
-	// Plan configurations
-	const plans = {
-		"Open": {
-			hourlyRate: 13,
-			maxDailyRate: 55,
-			kmRate1: 0, // first 75km free
-			kmRate2: 0.30,
-			kmThreshold: 75,
-			tripIsEligible: true
+// Plan configurations
+const plans = {
+	"Open": {
+		hourlyRate: 13,
+		maxDailyRate: 55,
+		kmRate1: 0, // first 75km free
+		kmRate2: 0.30,
+		kmThreshold: 75,
+		tripIsEligible: true
+	},
+	"Open Plus": {
+		hourlyRate: 7.5,
+		maxDailyRate: 50,
+		maxDailyRate2: 35,
+		kmRate1: 0.25,
+		kmRate2: 0.25, // same rate for all km
+		kmThreshold: Infinity, // no threshold change
+		tripIsEligible: true
+	},
+	"Value": {
+		hourlyRate: 4.5,
+		maxDailyRate: 35,
+		kmRate1: 0.47,
+		kmRate2: 0.34,
+		kmThreshold: 50,
+		tripIsEligible: true
+	},
+	"Value Plus": {
+		hourlyRate: 3.9,
+		maxDailyRate: 29,
+		kmRate1: 0.38,
+		kmRate2: 0.30,
+		kmThreshold: 50,
+		tripIsEligible: true
+	},
+	"Value Extra": {
+		hourlyRate: 3.6,
+		maxDailyRate: 25,
+		kmRate1: 0.30,
+		kmRate2: 0.30, // Same rate for all km
+		kmThreshold: Infinity, // No threshold change
+		tripIsEligible: true
+	},
+	longDistanceLow: {
+		hourlyRate: 15,
+		maxDailyRate: {
+			firstDay: 41,
+			additionalDay: 32,
+			week: 195
 		},
-		"Open Plus": {
-			hourlyRate: 7.5,
-			maxDailyRate: 50,
-			maxDailyRate2: 35,
-			kmRate1: 0.25,
-			kmRate2: 0.25, // same rate for all km
-			kmThreshold: Infinity, // no threshold change
-			tripIsEligible: true
-		},
-		"Value": {
-			hourlyRate: 4.5,
-			maxDailyRate: 35,
-			kmRate1: 0.47,
-			kmRate2: 0.34,
-			kmThreshold: 50,
-			tripIsEligible: true
-		},
-		"Value Plus": {
-			hourlyRate: 3.9,
-			maxDailyRate: 29,
-			kmRate1: 0.38,
-			kmRate2: 0.30,
-			kmThreshold: 50,
-			tripIsEligible: true
-		},
-		"Value Extra": {
-			hourlyRate: 3.6,
-			maxDailyRate: 25,
-			kmRate1: 0.30,
-			kmRate2: 0.30, // Same rate for all km
-			kmThreshold: Infinity, // No threshold change
-			tripIsEligible: true
-		},
-		longDistanceLow: {
-			hourlyRate: 15,
-			maxDailyRate: {
-				firstDay: 41,
-				additionalDay: 32,
-				week: 195
-			},
-			kmRate1: 0.24,
-			kmRate2: 0.15,
-			kmThreshold: 300,
-			tripIsEligible: (startDate, endDate) => {
-				const start = new Date(startDate)
+		kmRate1: 0.24,
+		kmRate2: 0.15,
+		kmThreshold: 300,
+		tripIsEligible: (startDate, endDate) => {
+			const start = new Date(startDate)
 
-				return [0, 1, 2, 3, 4, 10, 11].includes(start.getMonth()) || // any date in January, February, March, April, May, November, December
-					(start.getMonth() === 5 && start.getDate() < 15) || // June 1 to 14
-					(start.getMonth() === 9 && start.getDate() > 15) // October 16+
-			}
-		},
-		longDistanceHigh: {
-			hourlyRate: 15,
-			maxDailyRate: {
-				firstDay: 55,
-				additionalDay: 45,
-				week: 240
-			},
-			kmRate1: 0.24,
-			kmRate2: 0.15,
-			kmThreshold: 300,
-			tripIsEligible: (startDate, endDate) => {
-				const start = new Date(startDate)
-
-				return [6, 7, 8].includes(start.getMonth()) || // any date in July, August, September
-					(start.getMonth() === 5 && start.getDate() >= 15) || // June 15+
-					(start.getMonth() === 9 && start.getDate() <= 15) // October 1 to 15
-			}
-		},
-		workday: {
-			hourlyRate: 23,
-			maxDailyRate: 23, // 23 flat rate for day
-			kmRate1: 0, // first 40km free
-			kmRate2: 0.35,
-			kmThreshold: 40,
-			tripIsEligible: (startDate, endDate) => {
-				const start = new Date(startDate)
-				const end = new Date(endDate)
-
-				// bail if Sunday or Saturday
-				if ([0, 6].includes(start.getDay())) {
-					return false
-				}
-
-				return Math.abs(start - end) / (60 * 60 * 1000) <= 10
-			}
+			return [0, 1, 2, 3, 4, 10, 11].includes(start.getMonth()) || // any date in January, February, March, April, May, November, December
+				(start.getMonth() === 5 && start.getDate() < 15) || // June 1 to 14
+				(start.getMonth() === 9 && start.getDate() > 15) // October 16+
 		}
-	};
+	},
+	longDistanceHigh: {
+		hourlyRate: 15,
+		maxDailyRate: {
+			firstDay: 55,
+			additionalDay: 45,
+			week: 240
+		},
+		kmRate1: 0.24,
+		kmRate2: 0.15,
+		kmThreshold: 300,
+		tripIsEligible: (startDate, endDate) => {
+			const start = new Date(startDate)
 
+			return [6, 7, 8].includes(start.getMonth()) || // any date in July, August, September
+				(start.getMonth() === 5 && start.getDate() >= 15) || // June 15+
+				(start.getMonth() === 9 && start.getDate() <= 15) // October 1 to 15
+		}
+	},
+	workday: {
+		hourlyRate: 23,
+		maxDailyRate: 23, // 23 flat rate for day
+		kmRate1: 0, // first 40km free
+		kmRate2: 0.35,
+		kmThreshold: 40,
+		tripIsEligible: (startDate, endDate) => {
+			const start = new Date(startDate)
+			const end = new Date(endDate)
+
+			// bail if Sunday or Saturday
+			if ([0, 6].includes(start.getDay())) {
+				return false
+			}
+
+			return Math.abs(start - end) / (60 * 60 * 1000) <= 10
+		}
+	}
+};
+
+function calculateBaseRentalCost(startDate, endDate, totalKm) {
 	// Weekend surcharge rates
 	const weekendHourlySurcharge = 0.35;
 	const weekendDailySurcharge = 3.5;
@@ -121,11 +121,6 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 	// Parse dates
 	const start = new Date(startDate);
 	const end = new Date(endDate);
-
-	// Calculate number of calendar days the rental spans
-	const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-	const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-	const totalDays = Math.ceil((endDay - startDay) / (1000 * 60 * 60 * 24)) + 1;
 
 	// Calculate day-by-day breakdown
 	function calculateDayByDayBreakdown(startDate, endDate) {
