@@ -7,18 +7,6 @@ async function queryCommunautoPrice(startDate, endDate, totalKm) {
 
 	const prices = await qry.json()
 
-	// console.log(
-	// 	prices.tripPackageCostEstimateList
-	// 		.filter(estimate => estimate.serviceType === 'StationBased')
-	// 		.map(estimate => ({
-	// 			plan: estimate.localizedPlanTypeName,
-	// 			rate: estimate.localizedBillingRateName,
-	// 			duration: estimate.durationCost,
-	// 			distance: estimate.distanceCost,
-	// 			total: estimate.totalCost
-	// 		}))
-	// )
-
 	return prices.tripPackageCostEstimateList
 		.filter(estimate => estimate.serviceType === 'StationBased')
 }

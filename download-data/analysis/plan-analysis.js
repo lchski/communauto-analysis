@@ -122,11 +122,6 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 	const start = new Date(startDate);
 	const end = new Date(endDate);
 
-	// Calculate total hours in 15-minute increments
-	const totalMilliseconds = end - start;
-	const totalMinutes = totalMilliseconds / (1000 * 60);
-	const totalHours = Math.ceil(totalMinutes / 15) * 0.25;
-
 	// Calculate number of calendar days the rental spans
 	const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
 	const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
@@ -267,24 +262,6 @@ function calculateBaseRentalCost(startDate, endDate, totalKm) {
 			timeCost: Math.round(totalTimeCost * 100) / 100,
 			kmCost: Math.round(kmCost * 100) / 100,
 			totalCost: Math.round(totalCost * 100) / 100,
-			weekendHours: timeBreakdown.weekendHours,
-			weekdayHours: timeBreakdown.weekdayHours,
-			weekendDays: timeBreakdown.weekendDays,
-			weekdayDays: timeBreakdown.weekdayDays,
-			hasWeekend: timeBreakdown.hasWeekend,
-			totalHours: totalHours,
-			totalDays: totalDays,
-			usedDailyRate: totalDailyCost < totalHourlyCost,
-			hourlyBreakdown: {
-				weekdayCost: Math.round(weekdayHourlyCost * 100) / 100,
-				weekendCost: Math.round(weekendHourlyCost * 100) / 100,
-				total: Math.round(totalHourlyCost * 100) / 100
-			},
-			dailyBreakdown: {
-				weekdayCost: Math.round(weekdayDailyCost * 100) / 100,
-				weekendCost: Math.round(weekendDailyCost * 100) / 100,
-				total: Math.round(totalDailyCost * 100) / 100
-			},
 			dayByDayBreakdown: timeBreakdown.days.map(day => ({
 				date: day.date.toISOString().split('T')[0],
 				hours: day.hours,
