@@ -39,9 +39,11 @@ SELECT
 	n_trips: COUNT(*),
 	n_trips_longdistance: COUNTIF(rate_type = 'LSR_LongDistanceRate'),
 	distance_km: sum(distance_km),
-	rental_cost: round(sum(rental_cost), 2),
-	diff_v_to_vp: round(sum(diff_v_to_vp)),
-	diff_v_to_ve: round(sum(diff_v_to_ve)),
+	rental_cost: sum(rental_cost)::INTEGER,
+	diff_v_to_vp: sum(diff_v_to_vp)::INTEGER,
+	diff_v_to_ve: sum(diff_v_to_ve)::INTEGER,
+	fees_dpf: sum(fees_dpf)::INTEGER,
+	fees_dpf_202505_calc: sum(fees_dpf_202505_calc)::INTEGER
 	FROM t
 	GROUP BY year
 	ORDER BY year;
