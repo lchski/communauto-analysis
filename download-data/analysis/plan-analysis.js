@@ -499,6 +499,9 @@ const updated = records.map(row => {
 		newRow[planName] = plan.totalCost
 	}
 
+	newRow.diff_v_to_vp = newRow["Value"] - newRow["Value Plus"]
+	newRow.diff_v_to_ve = newRow["Value"] - newRow["Value Extra"]
+
 	return newRow
 });
 

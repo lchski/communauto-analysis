@@ -38,9 +38,13 @@ COPY (
 	SELECT
 		rental_id,
 		reservation_id,
+		year: date_trunc('year', date_start)::DATE,
 		date_start,
 		date_end,
 		date_end_billed: date_start + INTERVAL (duration_min_billed) MINUTES,
+		trip_note,
+		rate_type,
+		likely_work_trip,
 		duration_min,
 		duration_min_billed,
 		distance_km,
