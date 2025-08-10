@@ -3,13 +3,10 @@ import path from 'node:path'
 import { parse } from 'csv-parse/sync'
 import { stringify } from 'csv-stringify/sync'
 
-import { calculateRentalCost } from '../lib/communauto.js'
+import { calculateRentalCost, calculateDpf } from '../lib/communauto.js'
 
-/**
- * Compute on historical data
- */
-const inputPath = path.join('data', 'out', 'trips-to-calc.csv');
-const outputPath = path.join('data', 'out', 'trips-calculated.csv');
+const inputPath = path.join('data', 'out', 'trips-to-annotate.csv');
+const outputPath = path.join('data', 'out', 'trips-annotated.csv');
 
 // Read and parse CSV
 const input = fs.readFileSync(inputPath, 'utf8');
@@ -27,11 +24,10 @@ const updated = records.map(row => {
 			continue
 		}
 
-		newRow[planName] = plan.totalCost
+		newRow['cost_est_' + planName.toLowerCase().replaceAll(' ', '_')] = plan.totalCost
 	}
 
-	newRow.diff_v_to_vp = newRow["Value"] - newRow["Value Plus"]
-	newRow.diff_v_to_ve = newRow["Value"] - newRow["Value Extra"]
+    newRow.fees_dpf_202505_calc = calculateDpf(parseFloat(row.duration_min))
 
 	return newRow
 });

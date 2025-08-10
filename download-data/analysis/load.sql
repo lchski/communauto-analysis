@@ -30,27 +30,54 @@ FROM read_csv('data/indices/likely-work-trips.csv') lwt
 WHERE t.rental_id = lwt.rental_id AND t.reservation_id = lwt.reservation_id AND lwt.likely_work_trip = TRUE;
 
 
--- data to run through the DPF algorithm
-COPY (SELECT rental_id, reservation_id, date_start, trip_note, likely_work_trip, duration_min, fees_dpf FROM trips) TO 'data/out/dpf-fees-to-calc.csv';
-
--- data to run through the pricing algorithm
+-- Annotate data with the plan and DPF algorithms
 COPY (
 	SELECT
 		rental_id,
 		reservation_id,
-		year: date_trunc('year', date_start)::DATE,
 		date_start,
-		date_end,
 		date_end_billed: date_start + INTERVAL (duration_min_billed) MINUTES,
-		trip_note,
-		rate_type,
-		likely_work_trip,
 		duration_min,
-		duration_min_billed,
-		distance_km,
-		cost_total_from_plan: cost_duration + cost_distance
+		distance_km
 	FROM trips
-) TO 'data/out/trips-to-calc.csv';
+) TO 'data/out/trips-to-annotate.csv';
+
+.shell node analysis/annotate-trips.js
+
+ALTER TABLE trips
+ADD COLUMN cost_est_open DOUBLE;
+
+ALTER TABLE trips
+ADD COLUMN cost_est_open_plus DOUBLE;
+
+ALTER TABLE trips
+ADD COLUMN cost_est_value DOUBLE;
+
+ALTER TABLE trips
+ADD COLUMN cost_est_value_plus DOUBLE;
+
+ALTER TABLE trips
+ADD COLUMN cost_est_value_extra DOUBLE;
+
+ALTER TABLE trips
+ADD COLUMN fees_dpf_202505_calc DOUBLE;
+
+UPDATE trips
+SET 
+	cost_est_open = trips_annotated.cost_est_open,
+	cost_est_open_plus = trips_annotated.cost_est_open_plus,
+	cost_est_value = trips_annotated.cost_est_value,
+	cost_est_value_plus = trips_annotated.cost_est_value_plus,
+	cost_est_value_extra = trips_annotated.cost_est_value_extra,
+	fees_dpf_202505_calc = trips_annotated.fees_dpf_202505_calc
+FROM read_csv('data/out/trips-annotated.csv') trips_annotated
+WHERE
+	trips.rental_id = trips_annotated.rental_id AND
+	trips.reservation_id = trips_annotated.reservation_id;
+
+
+-- newRow.diff_v_to_vp = Math.round(newRow["cost_est_value"] - newRow["cost_est_value_plus"] * 100) / 100
+-- newRow.diff_v_to_ve = Math.round(newRow["cost_est_value"] - newRow["cost_est_value_extra"] * 100) / 100
 
 
 -- ANALYSIS
