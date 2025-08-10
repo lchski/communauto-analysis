@@ -21,17 +21,18 @@ FROM read_csv('data/indices/likely-work-trips.csv') lwt
 WHERE t.rental_id = lwt.rental_id AND t.reservation_id = lwt.reservation_id AND lwt.likely_work_trip = TRUE;
 
 
-
--- ANALYSIS
-
 --- TODO: add break-even thresholds per plan
 --- TODO: add months / pro-rate values
-WITH t AS (
+WITH t_to_analyze AS (
+	FROM trips
+	WHERE likely_work_trip IS NOT true
+),
+t AS (
 	SELECT
 		trips.*,
 		diff_v_to_vp: round(trips.cost_est_value - trips.cost_est_value_plus, 2),
 		diff_v_to_ve: round(trips.cost_est_value - trips.cost_est_value_extra, 2)
-	FROM trips
+	FROM t_to_analyze trips
 )
 SELECT
 	year: date_trunc('year', date_start)::DATE,
@@ -42,6 +43,5 @@ SELECT
 	diff_v_to_vp: round(sum(diff_v_to_vp)),
 	diff_v_to_ve: round(sum(diff_v_to_ve)),
 	FROM t
-	WHERE likely_work_trip IS NOT true
 	GROUP BY year
 	ORDER BY year;
