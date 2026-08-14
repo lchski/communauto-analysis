@@ -59,15 +59,20 @@ if [[ -z "$WCF_COOKIE" ]]; then
     exit 1
 fi
 
-for rental_id in $(jq -r '.transactions[] | select(.type == "StationBasedRental") | .rentalId' $TRANSACTIONS_FILE); do
+
+jq -r '.transactions[]
+  | select(.type | IN("StationBasedRental", "FreeFloatingRental"))
+  | [.rentalId, .type] | @tsv' "$TRANSACTIONS_FILE" \
+| while IFS=$'\t' read -r rental_id rental_type; do
     RENTAL_FILE="$OUT_DIR/rentals/$rental_id.json"
+    endpoint_type="${rental_type%Rental}"   # StationBasedRental -> StationBased, FreeFloatingRental -> FreeFloating
 
-    echo "\nProcessing rental ID: $rental_id"
+    echo "\nProcessing rental ID: $rental_id ($rental_type -> $endpoint_type)"
 
-    if [ ! -f $RENTAL_FILE ]; then
+    if [ ! -f "$RENTAL_FILE" ]; then
         echo "rental file not found, downloading"
 
-        response=$(curl "https://restapifrontoffice.reservauto.net/api/v2/Rental/$rental_id/StationBased" \
+        response=$(curl "https://restapifrontoffice.reservauto.net/api/v2/Rental/$rental_id/$endpoint_type" \
             -s \
             --compressed \
             -w "%{http_code}" \

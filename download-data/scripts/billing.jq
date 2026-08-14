@@ -8,6 +8,7 @@
     .tripTotalDurationInMinutes,
     ((.durationInfo[] | select(.durationType == "BilledDuration") | .durationInMinutes) // 0),
     .tripTotalDistanceInKm,
+    .reservationType,
     .rateType,
     .packageName,
     .transactionDate,

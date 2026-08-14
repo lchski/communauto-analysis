@@ -3,8 +3,8 @@
 [
     .rentalId,
     .rentalNb,
-    .startDate,
-    .endDate,
+    (.usedStartDate // .startDate),
+    (.usedEndDate   // .endDate),
     .vehicle.vehicleId,
     .vehicle.vehicleNb,
     .station.stationId,

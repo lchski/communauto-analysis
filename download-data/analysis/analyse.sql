@@ -47,3 +47,25 @@ SELECT
 	FROM t
 	GROUP BY year
 	ORDER BY year;
+
+
+-- RENT VS OWN
+select
+	year: year(date_start),
+	cost: round(sum(rental_cost)),
+	km: sum(distance_km),
+	cost_km: round(cost / km, 2),
+	count(reservation_id) as n from trips
+group by year
+order by year desc;
+
+--- with flex (NB: this doesn't account for FLEX pass cost, it'll show as "0" and drag the average down)
+select
+	year: year(date_start),
+	reservation_type,
+	cost: round(sum(rental_cost)),
+	km: sum(distance_km),
+	cost_km: round(cost / km, 2),
+	count(reservation_id) as n from trips
+group by year, reservation_type
+order by year desc, reservation_type;
