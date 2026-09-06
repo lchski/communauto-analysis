@@ -12,3 +12,7 @@ Download and extract:
 
 1. `./download-transactions.sh`
 2. `./extract-data.sh`
+
+Analyse:
+1. `duckdb analysis/communauto.db`
+2. Run the commands in `load.sql`
