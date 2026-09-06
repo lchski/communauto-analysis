@@ -1,43 +1,56 @@
 import { calculateDpf } from '../lib/communauto.js'
 
-// Values below reflect the DPF rates effective June 15, 2026:
-// $1.35 start fee + $1.15/hour, capped at $11/day and $30/week.
+// DPF rates effective June 15, 2026: $1.35 start fee + $1.15/hour,
+// capped at $11/day and $30/week.
+// Expected values below are derived directly from that formula (not from
+// calling calculateDpf), so they serve as an independent check on it.
+const START_FEE = 1.35
+const HOURLY_RATE = 1.15
+const DAILY_CAP = 11
+const WEEKLY_CAP = 30
+
+// calculateDpf rounds its result to the nearest cent; do the same here so
+// formula-derived expectations line up with it.
+const round2 = amount => Math.round(amount * 100) / 100
+const firstDayCost = minutes => Math.min(START_FEE + (minutes / 60) * HOURLY_RATE, DAILY_CAP)
+const laterDayCost = minutes => Math.min((minutes / 60) * HOURLY_RATE, DAILY_CAP)
+
 const tests = [
-	[30, 1.93],
-	[60, 2.5],
-	[60 * 3, 4.8],
-	[60 * 12, 11],
-	[(24 * 60), 11],
-	[(25 * 60), 12.15],
-	[(24 * 60) + (5 * 60), 16.75],
-	[(24 * 60 * 2), 22],
-	[(24 * 60 * 2) + 15, 22.29],
-	[(24 * 60 * 5), 30],
-	[(24 * 60 * 6), 30],
-	[(24 * 60 * 7), 30], // one full week, capped
-	[(24 * 60 * 7) + 60, 31.15],
-	[(24 * 60 * 7 * 2), 60], // two weeks, simple
-	[(24 * 60 * 7 * 2) + 60, 61.15], // two weeks, plus an hour
-	[(24 * 60 * 7 * 3), 90], // three weeks, simple
-	[(24 * 60 * 7 * 3) + 60, 91.15], // three weeks, plus an hour,
-	[(24 * 60 * 7 * 3) + (24 * 60) + 60, 90 + 11 + 1.15], // 3 weeks, 1 day, 1 hour,
-	[105,3.36],
-	[45,2.21],
-	[120,3.65],
-	[75,2.79],
-	[165,4.51],
-	[240,5.95],
-	[2070,22],
-	[555,11],
-	[720,11],
-	[315,7.39],
-	[345,7.96],
-	[465,10.26],
-	[120,3.65],
-	[135,3.94],
-	[90,3.08],
-	[240,5.95],
-	[135,3.94],
+	[30, round2(firstDayCost(30))],
+	[60, round2(firstDayCost(60))],
+	[60 * 3, round2(firstDayCost(60 * 3))],
+	[60 * 12, round2(firstDayCost(60 * 12))], // exceeds daily cap
+	[(24 * 60), round2(firstDayCost(24 * 60))], // exactly 1 day, capped
+	[(25 * 60), round2(DAILY_CAP + laterDayCost(60))], // 1 day capped + 1hr into day 2
+	[(24 * 60) + (5 * 60), round2(DAILY_CAP + laterDayCost(5 * 60))], // 1 day capped + 5hr into day 2
+	[(24 * 60 * 2), round2(2 * DAILY_CAP)], // 2 days, both capped, under weekly cap
+	[(24 * 60 * 2) + 15, round2((2 * DAILY_CAP) + laterDayCost(15))],
+	[(24 * 60 * 5), WEEKLY_CAP], // 5 days of daily caps (55) exceeds the weekly cap
+	[(24 * 60 * 6), WEEKLY_CAP], // 6 days of daily caps (66) exceeds the weekly cap
+	[(24 * 60 * 7), WEEKLY_CAP], // one full week, capped
+	[(24 * 60 * 7) + 60, round2(WEEKLY_CAP + laterDayCost(60))],
+	[(24 * 60 * 7 * 2), 2 * WEEKLY_CAP], // two weeks, simple
+	[(24 * 60 * 7 * 2) + 60, round2((2 * WEEKLY_CAP) + laterDayCost(60))], // two weeks, plus an hour
+	[(24 * 60 * 7 * 3), 3 * WEEKLY_CAP], // three weeks, simple
+	[(24 * 60 * 7 * 3) + 60, round2((3 * WEEKLY_CAP) + laterDayCost(60))], // three weeks, plus an hour
+	[(24 * 60 * 7 * 3) + (24 * 60) + 60, round2((3 * WEEKLY_CAP) + DAILY_CAP + laterDayCost(60))], // 3 weeks, 1 day, 1 hour
+	[105, round2(firstDayCost(105))],
+	[45, round2(firstDayCost(45))],
+	[120, round2(firstDayCost(120))],
+	[75, round2(firstDayCost(75))],
+	[165, round2(firstDayCost(165))],
+	[240, round2(firstDayCost(240))],
+	[2070, round2(DAILY_CAP + laterDayCost(2070 - (24 * 60)))], // 1 day capped + partial 2nd day, itself capped
+	[555, round2(firstDayCost(555))], // exceeds daily cap
+	[720, round2(firstDayCost(720))],
+	[315, round2(firstDayCost(315))],
+	[345, round2(firstDayCost(345))],
+	[465, round2(firstDayCost(465))],
+	[120, round2(firstDayCost(120))],
+	[135, round2(firstDayCost(135))],
+	[90, round2(firstDayCost(90))],
+	[240, round2(firstDayCost(240))],
+	[135, round2(firstDayCost(135))],
 ]
 
 const testEvals = tests
