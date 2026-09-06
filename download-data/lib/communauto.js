@@ -13,57 +13,59 @@
 // - Reconcile to the lowest eligible plan.
 
 // Plan configurations
+// Rates per Communauto Ontario Fee Schedule, effective June 15, 2026
 export const plans = {
 	"Open": {
-		hourlyRate: 13,
+		hourlyRate: 14.25,
 		maxDailyRate: 55,
+		maxDailyRate2: 50,
 		kmRate1: 0, // first 75km free
-		kmRate2: 0.30,
+		kmRate2: 0.31,
 		kmThreshold: 75,
 		tripIsEligible: true
 	},
 	"Open Plus": {
-		hourlyRate: 7.5,
+		hourlyRate: 7.65,
 		maxDailyRate: 50,
-		maxDailyRate2: 35,
-		kmRate1: 0.25,
-		kmRate2: 0.25, // same rate for all km
-		kmThreshold: Infinity, // no threshold change
+		maxDailyRate2: 36.50,
+		kmRate1: 0.30,
+		kmRate2: 0.29,
+		kmThreshold: 50,
 		tripIsEligible: true
 	},
 	"Value": {
-		hourlyRate: 4.5,
-		maxDailyRate: 35,
-		kmRate1: 0.47,
-		kmRate2: 0.34,
+		hourlyRate: 4.65,
+		maxDailyRate: 36.50,
+		kmRate1: 0.51,
+		kmRate2: 0.38,
 		kmThreshold: 50,
 		tripIsEligible: true
 	},
 	"Value Plus": {
-		hourlyRate: 3.9,
-		maxDailyRate: 29,
-		kmRate1: 0.38,
-		kmRate2: 0.30,
+		hourlyRate: 4.05,
+		maxDailyRate: 30.50,
+		kmRate1: 0.43,
+		kmRate2: 0.34,
 		kmThreshold: 50,
 		tripIsEligible: true
 	},
 	"Value Extra": {
-		hourlyRate: 3.6,
-		maxDailyRate: 25,
-		kmRate1: 0.30,
-		kmRate2: 0.30, // Same rate for all km
+		hourlyRate: 3.75,
+		maxDailyRate: 26.50,
+		kmRate1: 0.34,
+		kmRate2: 0.34, // Same rate for all km
 		kmThreshold: Infinity, // No threshold change
 		tripIsEligible: true
 	},
 	longDistanceLow: {
 		hourlyRate: 15,
 		maxDailyRate: {
-			firstDay: 41,
-			additionalDay: 32,
-			week: 195
+			firstDay: 46,
+			additionalDay: 37,
+			week: 220
 		},
-		kmRate1: 0.24,
-		kmRate2: 0.15,
+		kmRate1: 0.29,
+		kmRate2: 0.19,
 		kmThreshold: 300,
 		tripIsEligible: (startDate, endDate) => {
 			const start = new Date(startDate)
@@ -76,12 +78,12 @@ export const plans = {
 	longDistanceHigh: {
 		hourlyRate: 15,
 		maxDailyRate: {
-			firstDay: 55,
-			additionalDay: 45,
-			week: 240
+			firstDay: 61,
+			additionalDay: 52,
+			week: 290
 		},
-		kmRate1: 0.24,
-		kmRate2: 0.15,
+		kmRate1: 0.29,
+		kmRate2: 0.19,
 		kmThreshold: 300,
 		tripIsEligible: (startDate, endDate) => {
 			const start = new Date(startDate)
@@ -92,10 +94,10 @@ export const plans = {
 		}
 	},
 	workday: {
-		hourlyRate: 23,
-		maxDailyRate: 23, // 23 flat rate for day
+		hourlyRate: 25,
+		maxDailyRate: 25, // 25 flat rate for day
 		kmRate1: 0, // first 40km free
-		kmRate2: 0.35,
+		kmRate2: 0.39,
 		kmThreshold: 40,
 		tripIsEligible: (startDate, endDate) => {
 			const start = new Date(startDate)
@@ -408,10 +410,10 @@ export function calculateRentalCost(startDate, endDate, totalKm) {
 
 // improved by Claude after I jankily attempted to implement this surprisingly nuanced algorithm
 export function calculateDpf(billedMinutes) {
-	const DAILY_CAP = 10;
-	const WEEKLY_CAP = 25;
-	const START_FEE = 1.25;
-	const PER_MINUTE_RATE = 1 / 60; // $1 per hour = 1/60 per minute
+	const DAILY_CAP = 11;
+	const WEEKLY_CAP = 30;
+	const START_FEE = 1.35;
+	const PER_MINUTE_RATE = 1.15 / 60; // $1.15 per hour = 1.15/60 per minute
 	const MINUTES_PER_DAY = 24 * 60;
 	const MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY;
 
